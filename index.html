@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <title>StarTech-DeepSeek</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --user-bg: #e3f2fd;
+            --bot-bg: #f8f9fa;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f1f4f8;
+        }
+        
+        .header {
+            text-align: center;
+            margin: 30px 0;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--accent-color);
+        }
+        
+        .header h1 {
+            color: var(--primary-color);
+            font-size: 2.5em;
+            margin: 0;
+            letter-spacing: 2px;
+        }
+        
+        #chat-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            height: 65vh;
+            margin: 20px 0;
+            padding: 25px;
+            overflow-y: auto;
+        }
+        
+        .message {
+            margin: 15px 0;
+            padding: 15px 25px;
+            border-radius: 15px;
+            max-width: 75%;
+            position: relative;
+            transition: transform 0.2s;
+        }
+        
+        .message:hover {
+            transform: translateX(5px);
+        }
+        
+        .user-message {
+            background: var(--user-bg);
+            margin-left: auto;
+            border-top-right-radius: 5px;
+        }
+        
+        .bot-message {
+            background: var(--bot-bg);
+            margin-right: auto;
+            border-top-left-radius: 5px;
+        }
+        
+        .timestamp {
+            font-size: 0.8em;
+            color: #7f8c8d;
+            margin-top: 8px;
+            display: block;
+            text-align: right;
+        }
+        
+        #input-container {
+            display: flex;
+            gap: 15px;
+            margin: 25px 0;
+        }
+        
+        #user-input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #dfe6e9;
+            border-radius: 30px;
+            outline: none;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        #user-input:focus {
+            border-color: var(--accent-color);
+        }
+        
+        button {
+            padding: 15px 35px;
+            background: linear-gradient(135deg, var(--accent-color), #2980b9);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            letter-spacing: 1px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+        
+        .portal {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        
+        a {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 500;
+            position: relative;
+        }
+        
+        a::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 2px;
+            bottom: -2px;
+            left: 0;
+            background: currentColor;
+            transition: width 0.3s;
+        }
+        
+        a:hover::after {
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>StarTech-DeepSeek</h1>
+    </div>
+
+    <div id="chat-container"></div>
+
+    <div id="input-container">
+        <input type="text" id="user-input" placeholder="输入消息，按Enter发送...">
+        <button onclick="sendMessage()">发送</button>
+    </div>
+
+    <div class="portal">
+        <a href="https://startech7.mysxl.cn" target="_blank">关于</a>
+    </div>
+
+    <script>
+        const API_KEY = 'sk-3c4dc1c565aa4240865e6e48f8d38bf7';
+        
+        function getCurrentTime() {
+            const now = new Date();
+            return now.toLocaleTimeString('zh-CN', { 
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+        
+        async function sendMessage() {
+            const userInput = document.getElementById('user-input');
+            const message = userInput.value.trim();
+            if (!message) return;
+        
+            appendMessage(message, 'user');
+            userInput.value = '';
+        
+            try {
+                const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        messages: [{ role: 'user', content: message }]
+                    })
+                });
+        
+                const data = await response.json();
+                const reply = data.choices[0].message.content;
+                appendMessage(reply, 'bot');
+            } catch (error) {
+                appendMessage('请求出错，请稍后再试', 'bot');
+            }
+        }
+        
+        function appendMessage(content, role) {
+            const container = document.getElementById('chat-container');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}-message`;
+            
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'timestamp';
+            timeSpan.textContent = getCurrentTime();
+        
+            messageDiv.innerHTML = content;
+            messageDiv.appendChild(timeSpan);
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        document.getElementById('user-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') sendMessage();
+        });
+    </script>
+</body>
+
+</html>
